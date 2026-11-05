@@ -52,7 +52,7 @@
       .app {
         max-width: 100%;
         margin: 0 auto;
-        padding-top: 72px;
+        padding-top: 88px;
       }
 
       .topbar {
@@ -69,7 +69,7 @@
         left: 0;
         width: 100%;
         z-index: 1000;
-        height: 72px;
+        height: 88px;
         box-shadow: 0 5px 16px rgba(0, 0, 0, 0.2);
       }
 
@@ -166,8 +166,8 @@
 
       #map {
         width: 100vw;
-        height: calc(100vh - 72px);
-        min-height: calc(100vh - 72px);
+        height: calc(100vh - 88px);
+        min-height: calc(100vh - 88px);
         border-radius: 0;
         overflow: hidden;
         background: #ffffff;
@@ -264,8 +264,8 @@
 
         #map {
           width: 100vw;
-          height: calc(100vh - 72px);
-          min-height: calc(100vh - 72px);
+          height: calc(100vh - 88px);
+          min-height: calc(100vh - 88px);
         }
 
         .leaflet-control-zoom {
@@ -387,6 +387,7 @@
       let currentScale = 1;
       let currentRotation = 0;
       let pinchState = null;
+      let singleTouchPan = null;
       let draggingBeforePinch = false;
       let animationFrame = null;
 
@@ -420,8 +421,9 @@
         if (event.touches.length !== 2) return;
 
         if (!pinchState) {
-          draggingBeforePinch = map.dragging.enabled();
-          if (draggingBeforePinch) map.dragging.disable();
+          if (!singleTouchPan) draggingBeforePinch = map.dragging.enabled();
+          if (map.dragging.enabled()) map.dragging.disable();
+          singleTouchPan = null;
         }
 
         const [a, b] = [...event.touches];
@@ -439,6 +441,24 @@
       }, { passive: true });
 
       map.getContainer().addEventListener('touchmove', function (event) {
+        if (event.touches.length === 1 && singleTouchPan) {
+          event.preventDefault();
+
+          const touch = event.touches[0];
+          if (touch.identifier !== singleTouchPan.identifier) return;
+
+          const deltaX = touch.clientX - singleTouchPan.lastX;
+          const deltaY = touch.clientY - singleTouchPan.lastY;
+          const rotationRadians = currentRotation * Math.PI / 180;
+          const localDeltaX = (Math.cos(rotationRadians) * deltaX + Math.sin(rotationRadians) * deltaY) / currentScale;
+          const localDeltaY = (-Math.sin(rotationRadians) * deltaX + Math.cos(rotationRadians) * deltaY) / currentScale;
+
+          map.panBy(L.point(-localDeltaX, -localDeltaY), { animate: false });
+          singleTouchPan.lastX = touch.clientX;
+          singleTouchPan.lastY = touch.clientY;
+          return;
+        }
+
         if (event.touches.length !== 2 || !pinchState) return;
 
         event.preventDefault();
@@ -462,7 +482,20 @@
 
       function finishPinch(event) {
         if (event.touches.length >= 2) return;
+
+        if (event.touches.length === 1 && pinchState) {
+          const touch = event.touches[0];
+          singleTouchPan = {
+            identifier: touch.identifier,
+            lastX: touch.clientX,
+            lastY: touch.clientY
+          };
+          pinchState = null;
+          return;
+        }
+
         pinchState = null;
+        singleTouchPan = null;
 
         if (event.touches.length === 0 && draggingBeforePinch) {
           map.dragging.enable();
