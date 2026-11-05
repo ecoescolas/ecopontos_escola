@@ -171,13 +171,14 @@
         border-radius: 0;
         overflow: hidden;
         background: #ffffff;
+        touch-action: none;
       }
 
-      #map .leaflet-container {
-        touch-action: manipulation;
-        transition: transform 0.02s linear;
+      .leaflet-map-pane {
+        width: 100%;
+        height: 100%;
         transform-origin: center center;
-        will-change: transform;
+        will-change: transform, rotate, scale;
       }
 
       .sidebar {
@@ -367,26 +368,35 @@
         maxZoom: 3,
         zoomControl: true,
         scrollWheelZoom: true,
-        touchZoom: true,
+        touchZoom: false,
         doubleClickZoom: true,
         attributionControl: false,
         inertia: false,
         zoomSnap: 0.1
       });
 
-      const mapView = map.getContainer().querySelector('.leaflet-container');
+      const mapView = map.getPane('mapPane');
       let currentScale = 1;
       let currentRotation = 0;
       let pinchState = null;
+      let draggingBeforePinch = false;
       let animationFrame = null;
 
       function clamp(value, min, max) {
         return Math.min(Math.max(value, min), max);
       }
 
+      function getAngleDifference(angle, startAngle) {
+        let difference = angle - startAngle;
+        if (difference > 180) difference -= 360;
+        if (difference < -180) difference += 360;
+        return difference;
+      }
+
       function applyMapTransform() {
         if (!mapView) return;
-        mapView.style.transform = `rotate(${currentRotation}deg) scale(${currentScale})`;
+        mapView.style.rotate = `${currentRotation}deg`;
+        mapView.style.scale = `${currentScale}`;
       }
 
       function scheduleTransform() {
@@ -400,6 +410,11 @@
 
       map.getContainer().addEventListener('touchstart', function (event) {
         if (event.touches.length !== 2) return;
+
+        if (!pinchState) {
+          draggingBeforePinch = map.dragging.enabled();
+          if (draggingBeforePinch) map.dragging.disable();
+        }
 
         const [a, b] = [...event.touches];
         const dx = a.clientX - b.clientX;
@@ -429,16 +444,26 @@
         const scaleFactor = distance / pinchState.startDistance;
         const smoothedScale = 1 + (scaleFactor - 1) * 0.9;
         const nextScale = clamp(pinchState.startScale * smoothedScale, 0.9, 3.2);
-        const nextRotation = clamp(pinchState.startRotation + (angle - pinchState.startAngle) * 0.45, -35, 35);
+        const rotationDelta = getAngleDifference(angle, pinchState.startAngle);
+        const nextRotation = pinchState.startRotation + rotationDelta * 0.45;
 
         currentScale = nextScale;
         currentRotation = nextRotation;
         scheduleTransform();
       }, { passive: false });
 
-      map.getContainer().addEventListener('touchend', function () {
+      function finishPinch(event) {
+        if (event.touches.length >= 2) return;
         pinchState = null;
-      });
+
+        if (event.touches.length === 0 && draggingBeforePinch) {
+          map.dragging.enable();
+          draggingBeforePinch = false;
+        }
+      }
+
+      map.getContainer().addEventListener('touchend', finishPinch);
+      map.getContainer().addEventListener('touchcancel', finishPinch);
 
       L.imageOverlay('piso_0.png', floorBounds).addTo(map);
       map.fitBounds(floorBounds, { padding: [20, 20] });
