@@ -111,11 +111,11 @@
         font-weight: 700;
       }
 
-      .legend-dot {
+      .legend-icon {
         display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        object-fit: contain;
         margin-right: 6px;
         vertical-align: middle;
       }
@@ -283,13 +283,13 @@
 
       <div class="floating-legend">
         <p>
-          <span class="legend-dot" style="background:#e9c46a;"></span><strong>Ecoponto amarelo</strong>: Plástico.
+          <img class="legend-icon" src="plastico.png" alt="" /><strong>Ecoponto amarelo</strong>: Plástico e metal
         </p>
         <p>
-          <span class="legend-dot" style="background:#4ea1ff;"></span><strong>Ecoponto azul</strong>: Papel.
+          <img class="legend-icon" src="papel.png" alt="" /><strong>Ecoponto azul</strong>: Papel e cartão
         </p>
         <p>
-          <span class="legend-dot" style="background:#8b5a3c;"></span><strong>Ecoponto castanho</strong>: Indiferenciado.
+          <img class="legend-icon" src="indiferenciado.png" alt="" /><strong>Ecoponto castanho</strong>: Indiferenciado/Orgânico
         </p>
       </div>
 
@@ -361,6 +361,14 @@
         { name: 'Ecoponto Amarelo', type: 'Plástico e metal', coords: [1050, 420], color: '#e9c46a' },
         { name: 'Ecoponto Azul', type: 'Papel e cartão', coords: [900, 760], color: '#4ea1ff' }
       ];
+
+      const pointIcons = {
+        'Ecoponto Amarelo': 'plastico.png',
+        'Ecoponto Azul': 'papel.png',
+        'Ecoponto Verde': 'indiferenciado.png',
+        'Ecoponto Eletrónico': 'plastico.png',
+        'Ecoponto Castanho': 'indiferenciado.png'
+      };
 
       const map = L.map('map', {
         crs: L.CRS.Simple,
@@ -471,13 +479,23 @@
       const markers = L.layerGroup().addTo(map);
 
       ecoPoints.forEach((point) => {
-        const marker = L.circleMarker(point.coords, {
-          radius: 12,
-          color: '#ffffff',
-          weight: 2,
-          fillColor: point.color,
-          fillOpacity: 0.96
-        }).addTo(markers);
+        const iconPath = pointIcons[point.name];
+        const marker = iconPath
+          ? L.marker(point.coords, {
+              icon: L.icon({
+                iconUrl: iconPath,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15],
+                popupAnchor: [0, -15]
+              })
+            }).addTo(markers)
+          : L.circleMarker(point.coords, {
+              radius: 12,
+              color: '#ffffff',
+              weight: 2,
+              fillColor: point.color,
+              fillOpacity: 0.96
+            }).addTo(markers);
 
         marker.bindPopup(`
           <div style="font-family: 'Nunito Sans', sans-serif; min-width: 180px;">
