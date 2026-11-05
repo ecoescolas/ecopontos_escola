@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EcoPontos | Mapa Sustentável</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <style>
+      :root {
+        --green-900: #143d2b;
+        --green-700: #1f6f4f;
+        --green-500: #3dbb72;
+        --green-200: #dff7e8;
+        --sage-100: #f3faf5;
+        --text: #1d2b22;
+        --muted: #5d6c62;
+        --shadow: 0 18px 40px rgba(16, 62, 40, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        font-family: "Nunito Sans", sans-serif;
+        font-weight: 500;
+        background: #ffffff;
+        color: var(--text);
+      }
+
+      .leaflet-container {
+        background: #ffffff;
+      }
+
+      body {
+        padding: 0;
+      }
+
+      .app {
+        max-width: 100%;
+        margin: 0 auto;
+        padding-top: 72px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        background: #9e9e9e;
+        border: 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 1000;
+        height: 72px;
+        box-shadow: 0 5px 16px rgba(0, 0, 0, 0.2);
+      }
+
+      .topbar-logo {
+        width: 42px;
+        height: 42px;
+        object-fit: contain;
+        display: block;
+      }
+
+      .topbar-title {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #1d2b22;
+        letter-spacing: 0.02em;
+      }
+
+      .floating-legend {
+        position: absolute;
+        left: 14px;
+        bottom: 14px;
+        z-index: 500;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        padding: 10px 12px;
+        max-width: min(78vw, 360px);
+      }
+
+      .floating-legend p {
+        margin: 0;
+        line-height: 1.5;
+        font-size: 0.78rem;
+        color: #1d2b22;
+      }
+
+      .floating-legend strong {
+        font-weight: 700;
+      }
+
+      .legend-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .logo {
+        width: 30px;
+        height: 30px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-size: 16px;
+        background: linear-gradient(135deg, var(--green-700), var(--green-500));
+        box-shadow: inset 0 2px 10px rgba(255,255,255,0.25);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1rem, 1.7vw, 1.5rem);
+      }
+
+      .status {
+        background: #e9f8ee;
+        border: 1px solid rgba(61, 187, 114, 0.25);
+        color: var(--green-900);
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.82rem;
+      }
+
+      .layout {
+        display: block;
+        width: 100%;
+      }
+
+      .panel {
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      #map {
+        width: 100vw;
+        height: calc(100vh - 72px);
+        min-height: calc(100vh - 72px);
+        border-radius: 0;
+        overflow: hidden;
+        background: #ffffff;
+      }
+
+      #map .leaflet-container {
+        touch-action: manipulation;
+        transition: transform 0.02s linear;
+        transform-origin: center center;
+        will-change: transform;
+      }
+
+      .sidebar {
+        padding: 22px;
+      }
+
+      .sidebar h2 {
+        margin: 0 0 18px;
+        font-size: 1.25rem;
+      }
+
+      .legend {
+        display: grid;
+        gap: 12px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: var(--sage-100);
+      }
+
+      .dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        display: inline-block;
+        border: 3px solid rgba(255,255,255,0.8);
+        box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+      }
+
+      .meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .meta strong {
+        font-size: 0.96rem;
+      }
+
+      .meta span {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      .stats {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .stat-box {
+        padding: 16px 14px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #ebfff0 0%, #f5faf7 100%);
+        border: 1px solid rgba(31, 111, 79, 0.1);
+      }
+
+      .stat-box strong {
+        display: block;
+        font-size: 1.35rem;
+        color: var(--green-900);
+      }
+
+      .stat-box span {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+
+      @media (max-width: 900px) {
+        body {
+          padding: 0;
+        }
+
+        .sidebar {
+          display: none;
+        }
+
+        #map {
+          width: 100vw;
+          height: calc(100vh - 72px);
+          min-height: calc(100vh - 72px);
+        }
+
+        .leaflet-control-zoom {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar panel">
+        <img class="topbar-logo" src="logo_ecopontos.aevnb.png" alt="Logo EcoPontos" />
+        <div class="topbar-title">Ecopontos</div>
+      </header>
+
+      <div class="floating-legend">
+        <p>
+          <span class="legend-dot" style="background:#e9c46a;"></span><strong>Ecoponto amarelo</strong>: Plástico.
+        </p>
+        <p>
+          <span class="legend-dot" style="background:#4ea1ff;"></span><strong>Ecoponto azul</strong>: Papel.
+        </p>
+        <p>
+          <span class="legend-dot" style="background:#8b5a3c;"></span><strong>Ecoponto castanho</strong>: Indiferenciado.
+        </p>
+      </div>
+
+      <main class="layout">
+        <section class="panel">
+          <div id="map" aria-label="Mapa de ecopontos"></div>
+        </section>
+
+        <aside class="panel sidebar">
+          <h2>Legenda</h2>
+          <div class="legend">
+            <div class="legend-item">
+              <span class="dot" style="background:#e9c46a;"></span>
+              <div class="meta">
+                <strong>Ecoponto Amarelo</strong>
+                <span>Plástico e metal</span>
+              </div>
+            </div>
+            <div class="legend-item">
+              <span class="dot" style="background:#4ea1ff;"></span>
+              <div class="meta">
+                <strong>Ecoponto Azul</strong>
+                <span>Papel e cartão</span>
+              </div>
+            </div>
+            <div class="legend-item">
+              <span class="dot" style="background:#1fbf75;"></span>
+              <div class="meta">
+                <strong>Ecoponto Verde</strong>
+                <span>Vidro e resíduos orgânicos</span>
+              </div>
+            </div>
+            <div class="legend-item">
+              <span class="dot" style="background:#8b5cf6;"></span>
+              <div class="meta">
+                <strong>Descarte Eletrónico</strong>
+                <span>Eletrónica e baterias</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat-box">
+              <strong>4</strong>
+              <span>tipos</span>
+            </div>
+            <div class="stat-box">
+              <strong>12</strong>
+              <span>locais</span>
+            </div>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script>
+      const floorBounds = [[0, 0], [1390, 992]];
+
+      const ecoPoints = [
+        { name: 'Ecoponto Amarelo', type: 'Plástico e metal', coords: [180, 310], color: '#e9c46a' },
+        { name: 'Ecoponto Azul', type: 'Papel e cartão', coords: [250, 640], color: '#4ea1ff' },
+        { name: 'Ecoponto Verde', type: 'Vidro e orgânicos', coords: [540, 290], color: '#1fbf75' },
+        { name: 'Ecoponto Eletrónico', type: 'Baterias e eletrónica', coords: [740, 520], color: '#8b5cf6' },
+        { name: 'Ecoponto Amarelo', type: 'Plástico e metal', coords: [1050, 420], color: '#e9c46a' },
+        { name: 'Ecoponto Azul', type: 'Papel e cartão', coords: [900, 760], color: '#4ea1ff' }
+      ];
+
+      const map = L.map('map', {
+        crs: L.CRS.Simple,
+        minZoom: -1,
+        maxZoom: 3,
+        zoomControl: true,
+        scrollWheelZoom: true,
+        touchZoom: true,
+        doubleClickZoom: true,
+        attributionControl: false,
+        inertia: false,
+        zoomSnap: 0.1
+      });
+
+      const mapView = map.getContainer().querySelector('.leaflet-container');
+      let currentScale = 1;
+      let currentRotation = 0;
+      let pinchState = null;
+      let animationFrame = null;
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function applyMapTransform() {
+        if (!mapView) return;
+        mapView.style.transform = `rotate(${currentRotation}deg) scale(${currentScale})`;
+      }
+
+      function scheduleTransform() {
+        if (animationFrame) return;
+
+        animationFrame = requestAnimationFrame(() => {
+          applyMapTransform();
+          animationFrame = null;
+        });
+      }
+
+      map.getContainer().addEventListener('touchstart', function (event) {
+        if (event.touches.length !== 2) return;
+
+        const [a, b] = [...event.touches];
+        const dx = a.clientX - b.clientX;
+        const dy = a.clientY - b.clientY;
+        const distance = Math.hypot(dx, dy);
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+        pinchState = {
+          startDistance: distance,
+          startAngle: angle,
+          startScale: currentScale,
+          startRotation: currentRotation
+        };
+      }, { passive: true });
+
+      map.getContainer().addEventListener('touchmove', function (event) {
+        if (event.touches.length !== 2 || !pinchState) return;
+
+        event.preventDefault();
+
+        const [a, b] = [...event.touches];
+        const dx = a.clientX - b.clientX;
+        const dy = a.clientY - b.clientY;
+        const distance = Math.hypot(dx, dy);
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+        const scaleFactor = distance / pinchState.startDistance;
+        const smoothedScale = 1 + (scaleFactor - 1) * 0.9;
+        const nextScale = clamp(pinchState.startScale * smoothedScale, 0.9, 3.2);
+        const nextRotation = clamp(pinchState.startRotation + (angle - pinchState.startAngle) * 0.45, -35, 35);
+
+        currentScale = nextScale;
+        currentRotation = nextRotation;
+        scheduleTransform();
+      }, { passive: false });
+
+      map.getContainer().addEventListener('touchend', function () {
+        pinchState = null;
+      });
+
+      L.imageOverlay('piso_0.png', floorBounds).addTo(map);
+      map.fitBounds(floorBounds, { padding: [20, 20] });
+
+      const markers = L.layerGroup().addTo(map);
+
+      ecoPoints.forEach((point) => {
+        const marker = L.circleMarker(point.coords, {
+          radius: 12,
+          color: '#ffffff',
+          weight: 2,
+          fillColor: point.color,
+          fillOpacity: 0.96
+        }).addTo(markers);
+
+        marker.bindPopup(`
+          <div style="font-family: 'Nunito Sans', sans-serif; min-width: 180px;">
+            <strong>${point.name}</strong><br>
+            <span>${point.type}</span>
+          </div>
+        `);
+      });
+    </script>
+  </body>
+</html>
