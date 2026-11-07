@@ -212,6 +212,18 @@
         will-change: transform, rotate, scale;
       }
 
+      .eco-marker {
+        background: transparent;
+        border: 0;
+      }
+
+      .eco-marker-image {
+        display: block;
+        width: 30px;
+        height: 30px;
+        transform-origin: center;
+      }
+
       .sidebar {
         padding: 22px;
       }
@@ -437,6 +449,13 @@
         if (!mapView) return;
         mapView.style.rotate = `${currentRotation}deg`;
         mapView.style.scale = `${currentScale}`;
+
+        markers.eachLayer((marker) => {
+          const iconImage = marker.getElement()?.querySelector('.eco-marker-image');
+          if (iconImage) {
+            iconImage.style.transform = `scale(${1 / currentScale}) rotate(${-currentRotation}deg)`;
+          }
+        });
       }
 
       function scheduleTransform() {
@@ -546,11 +565,12 @@
         const iconPath = pointIcons[point.name];
         const marker = iconPath
           ? L.marker(point.coords, {
-              icon: L.icon({
-                iconUrl: iconPath,
+              icon: L.divIcon({
+                html: `<img class="eco-marker-image" src="${iconPath}" alt="">`,
                 iconSize: [30, 30],
                 iconAnchor: [15, 15],
-                popupAnchor: [0, -15]
+                popupAnchor: [0, -15],
+                className: 'eco-marker'
               })
             }).addTo(markers)
           : L.circleMarker(point.coords, {
