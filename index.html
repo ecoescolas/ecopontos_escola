@@ -468,6 +468,20 @@
       }
 
       map.getContainer().addEventListener('touchstart', function (event) {
+        if (event.touches.length === 1 && !pinchState) {
+          const touch = event.touches[0];
+          if (!singleTouchPan) {
+            draggingBeforePinch = map.dragging.enabled();
+            if (draggingBeforePinch) map.dragging.disable();
+          }
+          singleTouchPan = {
+            identifier: touch.identifier,
+            lastX: touch.clientX,
+            lastY: touch.clientY
+          };
+          return;
+        }
+
         if (event.touches.length !== 2) return;
 
         if (!pinchState) {
